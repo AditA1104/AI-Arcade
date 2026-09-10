@@ -2,7 +2,7 @@
 
 > A live, webcam-controlled arcade game — no keyboard, no mouse, no controller. Just you.
 
-Built for a club showcase booth: players control the game entirely through body movement, tracked live via webcam, competing for the top spot on a real-time leaderboard.
+Players control the game entirely through body movement, tracked live via webcam, competing for the top spot on a real-time leaderboard.
 
 **100% free · Fully offline · No GPU required · Runs on a standard laptop CPU**
 
@@ -88,7 +88,7 @@ Download from [python.org](https://www.python.org/downloads/) — ✅ make sure 
 ### 2 — Clone the repo
 
 ```bash
-git clone <repo-url>
+git clone <https://github.com/AditA1104/AI-Arcade.git>
 cd AI-Arcade
 ```
 
@@ -175,8 +175,4 @@ Runs smoothly at **30+ FPS** on a MacBook Air M4, CPU-only. MediaPipe Pose is a 
 | Role | Owner | Scope |
 |---|---|---|
 | 👁️ Vision & Integration | **Adit** | Camera pipeline, MediaPipe, calibration, smoothing, threading |
-| 🕹️ Game & UI | **Teammate** | Pygame mechanics, game states, leaderboard, booth UX flow |
-
----
-
-<p align="center">Built in 4 days for a club showcase 🚀</p>
+| 🕹️ Game & UI | **Srujan Gudla** | Pygame mechanics, game states, leaderboard, booth UX flow |
