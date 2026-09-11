@@ -21,10 +21,10 @@ No sensors. No wearables. No install beyond Python. Just a laptop and a webcam.
 ```
    Webcam Feed              Vision Pipeline              Game Engine
 ┌────────────────┐      ┌────────────────────┐      ┌──────────────────┐
-│                │      │  MediaPipe Pose      │      │   Pygame          │
-│  Live camera   │ ───► │  Calibration          │ ───► │   Slicer mechanics│
-│  capture       │      │  EMA smoothing        │      │   Leaderboard      │
-│                │      │  Threaded tracking     │      │   Booth UI flow    │
+│                │      │  MediaPipe Pose    │      │  Pygame          │
+│  Live camera   │ ───► │  Calibration       │ ───► │  Slicer mechanics│
+│  capture       │      │  EMA smoothing     │      │  Leaderboard     │
+│                │      │  Threaded tracking │      │  Booth UI flow   │
 └────────────────┘      └────────────────────┘      └──────────────────┘
                               get_player_position()
                                   ⬇ (x, y)
@@ -175,4 +175,4 @@ Runs smoothly at **30+ FPS** on a MacBook Air M4, CPU-only. MediaPipe Pose is a 
 | Role | Owner | Scope |
 |---|---|---|
 | 👁️ Vision & Integration | **Adit** | Camera pipeline, MediaPipe, calibration, smoothing, threading |
-| 🕹️ Game & UI | **Srujan Gudla** | Pygame mechanics, game states, leaderboard, booth UX flow |
+| 🕹️ Game & UI | **Srujan** | Pygame mechanics, game states, leaderboard, booth UX flow |
