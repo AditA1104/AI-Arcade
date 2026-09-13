@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+*.pyc
+leaderboard.db
+*.zip
+*_BACKUP.py
+*_backup.py
+*_BEFORE_*.py
+sprites_BEFORE_*.py
+sprites_CURRENT_BROKEN_BACKUP.py
+sprites_PROCEDURAL_BACKUP.py
+new_fruit_pack/
