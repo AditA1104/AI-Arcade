@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import time
 import threading
+import math
 
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
@@ -16,7 +17,7 @@ SHOW_DEBUG_WINDOW = True  # set False for a clean run with no window
 class VisionTracker:
     def __init__(self):
         self.pose = mp_pose.Pose(
-            model_complexity=0,
+            model_complexity=1,
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5
         )
@@ -39,6 +40,11 @@ class VisionTracker:
         scaled = (value - v_min) / (v_max - v_min)
         return max(0.0, min(1.0, scaled))
 
+    def _get_best_wrist(self, landmarks):
+        right = landmarks[mp_pose.PoseLandmark.RIGHT_WRIST]
+        left = landmarks[mp_pose.PoseLandmark.LEFT_WRIST]
+        return right if right.visibility >= left.visibility else left
+
     def warmup(self, duration=2.0):
         start = time.time()
         while time.time() - start < duration:
@@ -55,9 +61,21 @@ class VisionTracker:
                 cv2.imshow("Pose Test", frame)
                 cv2.waitKey(1)
 
-    def calibrate(self, duration=5.0):
-        ret, sample_frame = self.cap.read()
-        h, w = sample_frame.shape[:2]
+    def calibrate(self, duration=7.0):
+        # Retry briefly in case the camera hasn't produced a frame yet
+        # (slow driver init) — avoids crashing on a None frame.
+        sample_frame = None
+        retry_start = time.time()
+        while sample_frame is None and time.time() - retry_start < 3.0:
+            ret, frame = self.cap.read()
+            if ret and frame is not None:
+                sample_frame = frame
+
+        if sample_frame is None:
+            print("Warning: camera not responding, using default 640x480 for calibration UI.")
+            h, w = 480, 640
+        else:
+            h, w = sample_frame.shape[:2]
 
         x_min, x_max = 1.0, 0.0
         y_min, y_max = 1.0, 0.0
@@ -76,7 +94,7 @@ class VisionTracker:
             if results.pose_landmarks:
                 if SHOW_DEBUG_WINDOW:
                     mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-                wrist = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_WRIST]
+                wrist = self._get_best_wrist(results.pose_landmarks.landmark)
                 if wrist.visibility > VISIBILITY_THRESHOLD:
                     x_min = min(x_min, wrist.x)
                     x_max = max(x_max, wrist.x)
@@ -113,7 +131,21 @@ class VisionTracker:
             results = self.pose.process(rgb_frame)
 
             if results.pose_landmarks:
-                wrist = results.pose_landmarks.landmark[mp_pose.PoseLandmark.RIGHT_WRIST]
+                wrist = self._get_best_wrist(results.pose_landmarks.landmark)
+
+                # Auto-expand calibration bounds live — if the player genuinely
+                # reaches further than initial calibration captured, widen the
+                # range instead of leaving that area permanently unreachable.
+                margin = 0.02
+                if wrist.visibility > 0.75:
+                    if wrist.x < self.X_MIN:
+                        self.X_MIN = max(0, wrist.x - margin)
+                    if wrist.x > self.X_MAX:
+                        self.X_MAX = min(1, wrist.x + margin)
+                    if wrist.y < self.Y_MIN:
+                        self.Y_MIN = max(0, wrist.y - margin)
+                    if wrist.y > self.Y_MAX:
+                        self.Y_MAX = min(1, wrist.y + margin)
 
                 norm_x = self._normalize_and_clamp(wrist.x, self.X_MIN, self.X_MAX)
                 norm_y = self._normalize_and_clamp(wrist.y, self.Y_MIN, self.Y_MAX)
@@ -121,11 +153,20 @@ class VisionTracker:
                 raw_x = norm_x * GAME_WIDTH
                 raw_y = norm_y * GAME_HEIGHT
 
+                # Adaptive smoothing: fast movement gets less smoothing (more
+                # responsive), slow/still movement gets more smoothing (less jitter).
                 if self._smoothed_x is None:
                     self._smoothed_x, self._smoothed_y = raw_x, raw_y
                 else:
-                    self._smoothed_x = ALPHA * raw_x + (1 - ALPHA) * self._smoothed_x
-                    self._smoothed_y = ALPHA * raw_y + (1 - ALPHA) * self._smoothed_y
+                    delta = math.hypot(raw_x - self._smoothed_x, raw_y - self._smoothed_y)
+                    speed_factor = min(1.0, delta / 200)  # 0 = still, 1 = fast swipe
+                    dynamic_alpha = ALPHA + (0.65 - ALPHA) * speed_factor
+
+                    confidence = max(0.15, min(1.0, wrist.visibility))
+                    effective_alpha = dynamic_alpha * confidence
+
+                    self._smoothed_x = effective_alpha * raw_x + (1 - effective_alpha) * self._smoothed_x
+                    self._smoothed_y = effective_alpha * raw_y + (1 - effective_alpha) * self._smoothed_y
 
                 with self._lock:
                     self._pos = (int(self._smoothed_x), int(self._smoothed_y))

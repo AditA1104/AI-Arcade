@@ -1,0 +1,168 @@
+diff --git a/input.py b/input.py
+index 8aec113..de0d540 100644
+--- a/input.py
++++ b/input.py
+@@ -1,15 +1,28 @@
+-import pygame
++"""
++Integration boundary between the game (main.py) and player input.
+ 
++This is the ONLY file that decides where player position comes from.
++It now wires straight through to the live pose-tracking module
++(vision.py). main.py never touches vision.py or pygame.mouse directly.
+ 
+-def get_player_position():
+-    """
+-    Return the player's current position as (x, y).
++To fall back to mouse control for quick local testing without a
++camera, comment out the vision import block below and uncomment the
++pygame-mouse block instead.
++"""
+ 
+-    Currently uses the mouse as a stand-in for hand tracking.
++from vision import init_tracker, get_player_position, shutdown_tracker
+ 
+-    IMPORTANT:
+-    Do not read pygame.mouse anywhere else in the game.
+-    During integration, this function will be replaced with
+-    the vision module's get_player_position().
+-    """
+-    return pygame.mouse.get_pos()
++__all__ = ["init_tracker", "get_player_position", "shutdown_tracker"]
++
++
++# ---- Mouse fallback (uncomment to test without a camera) ----
++# import pygame
++#
++# def init_tracker():
++#     pass
++#
++# def get_player_position():
++#     return pygame.mouse.get_pos()
++#
++# def shutdown_tracker():
++#     pass
+diff --git a/main.py b/main.py
+index 1c3f7b7..a478c06 100644
+--- a/main.py
++++ b/main.py
+@@ -6,7 +6,7 @@ from datetime import datetime
+ 
+ import pygame
+ 
+-from input import get_player_position
++from input import get_player_position, init_tracker, shutdown_tracker
+ from leaderboard import initialize_database, add_score, get_top_scores
+ from sprites import make_fruit_sprite, make_bomb_sprite, make_custom_fruit_sprite
+ 
+@@ -780,7 +780,9 @@ pygame.display.set_caption(
+ 
+ clock = pygame.time.Clock()
+ 
+-pygame.mouse.set_visible(True)
++# The purple tracked-position circle is the player's real cursor now;
++# hide the OS mouse pointer so it doesn't float around the booth screen.
++pygame.mouse.set_visible(False)
+ 
+ initialize_database()
+ 
+@@ -804,6 +806,51 @@ font_huge = pygame.font.Font(
+     110,
+ )
+ 
++# ============================================================
++# START CAMERA TRACKING
++# ============================================================
++# This blocks for ~7 seconds (warmup + wave-around calibration) and
++# opens its own small camera window during that step. Show a loading
++# screen on the game window first so it doesn't look frozen meanwhile.
++
++loading_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
++loading_screen.fill(BACKGROUND_COLOR)
++
++loading_title = font_large.render(
++    "STARTING CAMERA TRACKING",
++    True,
++    WHITE,
++)
++
++loading_sub = font_medium.render(
++    "Look at the small camera window, then wave your hand around",
++    True,
++    (150, 160, 200),
++)
++
++screen.blit(
++    loading_screen,
++    (0, 0),
++)
++
++screen.blit(
++    loading_title,
++    loading_title.get_rect(
++        center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 30)
++    ),
++)
++
++screen.blit(
++    loading_sub,
++    loading_sub.get_rect(
++        center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30)
++    ),
++)
++
++pygame.display.flip()
++
++init_tracker()
++
+ 
+ # ============================================================
+ # GAME VARIABLES
+@@ -2519,6 +2566,8 @@ while running:
+ # CLEANUP
+ # ============================================================
+ 
++shutdown_tracker()
++
+ pygame.quit()
+ 
+ 
+diff --git a/requirements.txt b/requirements.txt
+index c1b1b1e..40ef9c4 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -14,7 +14,6 @@ mediapipe==0.10.21
+ ml_dtypes==0.5.4
+ numpy==1.26.4
+ opencv-contrib-python==4.11.0.86
+-opencv-python==5.0.0.93
+ opt_einsum==3.4.0
+ packaging==26.3
+ pillow==12.3.0
+diff --git a/vision.py b/vision.py
+index 927c7aa..d014e7b 100644
+--- a/vision.py
++++ b/vision.py
+@@ -56,8 +56,20 @@ class VisionTracker:
+                 cv2.waitKey(1)
+ 
+     def calibrate(self, duration=5.0):
+-        ret, sample_frame = self.cap.read()
+-        h, w = sample_frame.shape[:2]
++        # Retry briefly in case the camera hasn't produced a frame yet
++        # (slow driver init) — avoids crashing on a None frame.
++        sample_frame = None
++        retry_start = time.time()
++        while sample_frame is None and time.time() - retry_start < 3.0:
++            ret, frame = self.cap.read()
++            if ret and frame is not None:
++                sample_frame = frame
++
++        if sample_frame is None:
++            print("Warning: camera not responding, using default 640x480 for calibration UI.")
++            h, w = 480, 640
++        else:
++            h, w = sample_frame.shape[:2]
+ 
+         x_min, x_max = 1.0, 0.0
+         y_min, y_max = 1.0, 0.0

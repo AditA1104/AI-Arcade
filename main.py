@@ -6,7 +6,7 @@ from datetime import datetime
 
 import pygame
 
-from input import get_player_position
+from input import get_player_position, init_tracker, shutdown_tracker
 from leaderboard import initialize_database, add_score, get_top_scores
 from sprites import make_fruit_sprite, make_bomb_sprite, make_custom_fruit_sprite
 
@@ -607,12 +607,12 @@ class Fruit:
         )
 
         self.vy = random.uniform(
-            -850,
-            -650,
+            -1050,
+            -550,
         )
 
         self.gravity = random.uniform(
-            800,
+            700,
             1050,
         )
 
@@ -780,7 +780,9 @@ pygame.display.set_caption(
 
 clock = pygame.time.Clock()
 
-pygame.mouse.set_visible(True)
+# The purple tracked-position circle is the player's real cursor now;
+# hide the OS mouse pointer so it doesn't float around the booth screen.
+pygame.mouse.set_visible(False)
 
 initialize_database()
 
@@ -803,6 +805,51 @@ font_huge = pygame.font.Font(
     None,
     110,
 )
+
+# ============================================================
+# START CAMERA TRACKING
+# ============================================================
+# This blocks for ~7 seconds (warmup + wave-around calibration) and
+# opens its own small camera window during that step. Show a loading
+# screen on the game window first so it doesn't look frozen meanwhile.
+
+loading_screen = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+loading_screen.fill(BACKGROUND_COLOR)
+
+loading_title = font_large.render(
+    "STARTING CAMERA TRACKING",
+    True,
+    WHITE,
+)
+
+loading_sub = font_medium.render(
+    "Look at the small camera window, then wave your hand around",
+    True,
+    (150, 160, 200),
+)
+
+screen.blit(
+    loading_screen,
+    (0, 0),
+)
+
+screen.blit(
+    loading_title,
+    loading_title.get_rect(
+        center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 - 30)
+    ),
+)
+
+screen.blit(
+    loading_sub,
+    loading_sub.get_rect(
+        center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2 + 30)
+    ),
+)
+
+pygame.display.flip()
+
+init_tracker()
 
 
 # ============================================================
@@ -2518,6 +2565,8 @@ while running:
 # ============================================================
 # CLEANUP
 # ============================================================
+
+shutdown_tracker()
 
 pygame.quit()
 

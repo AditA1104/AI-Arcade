@@ -1,15 +1,28 @@
-import pygame
+"""
+Integration boundary between the game (main.py) and player input.
+
+This is the ONLY file that decides where player position comes from.
+It now wires straight through to the live pose-tracking module
+(vision.py). main.py never touches vision.py or pygame.mouse directly.
+
+To fall back to mouse control for quick local testing without a
+camera, comment out the vision import block below and uncomment the
+pygame-mouse block instead.
+"""
+
+from vision import init_tracker, get_player_position, shutdown_tracker
+
+__all__ = ["init_tracker", "get_player_position", "shutdown_tracker"]
 
 
-def get_player_position():
-    """
-    Return the player's current position as (x, y).
-
-    Currently uses the mouse as a stand-in for hand tracking.
-
-    IMPORTANT:
-    Do not read pygame.mouse anywhere else in the game.
-    During integration, this function will be replaced with
-    the vision module's get_player_position().
-    """
-    return pygame.mouse.get_pos()
+# ---- Mouse fallback (uncomment to test without a camera) ----
+# import pygame
+#
+# def init_tracker():
+#     pass
+#
+# def get_player_position():
+#     return pygame.mouse.get_pos()
+#
+# def shutdown_tracker():
+#     pass
