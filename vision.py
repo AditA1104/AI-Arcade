@@ -10,7 +10,7 @@ mp_drawing = mp.solutions.drawing_utils
 GAME_WIDTH = 1280
 GAME_HEIGHT = 720
 VISIBILITY_THRESHOLD = 0.6
-ALPHA = 0.4  # EMA smoothing factor
+ALPHA = 0.5  # EMA smoothing factor
 
 SHOW_DEBUG_WINDOW = True  # set False for a clean run with no window
 
@@ -61,7 +61,7 @@ class VisionTracker:
                 cv2.imshow("Pose Test", frame)
                 cv2.waitKey(1)
 
-    def calibrate(self, duration=7.0):
+    def calibrate(self, duration=8.0):
         # Retry briefly in case the camera hasn't produced a frame yet
         # (slow driver init) — avoids crashing on a None frame.
         sample_frame = None

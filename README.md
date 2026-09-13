@@ -16,6 +16,40 @@ No sensors. No wearables. No install beyond Python. Just a laptop and a webcam.
 
 ---
 
+## ⚡ Quick Start (recommended)
+
+One command sets up everything — Python venv, dependencies, and launches the game. No manual pip wrangling.
+
+**Requirement:** Python 3.11 installed first ([python.org](https://www.python.org/downloads/) or `brew install python@3.11` on macOS). This is the one thing the script can't install for you.
+
+<details>
+<summary><b>macOS / Linux</b></summary>
+
+```bash
+git clone https://github.com/AditA1104/AI-Arcade.git
+cd AI-Arcade
+chmod +x setup.sh
+./setup.sh
+```
+</details>
+
+<details>
+<summary><b>Windows</b></summary>
+
+```bash
+git clone https://github.com/AditA1104/AI-Arcade.git
+cd AI-Arcade
+setup.bat
+```
+(or just double-click `setup.bat` in File Explorer)
+</details>
+
+Re-running the script later just reuses the existing environment and relaunches the game — safe to run any time you want to play again.
+
+If the script fails or you'd rather do it by hand, see the manual steps below — same result, more control over each step.
+
+---
+
 ## 🧠 How It Works
 
 ```
@@ -56,16 +90,20 @@ This is the entire integration surface. The vision module fills it with real, li
 
 ```
 AI-Arcade/
-├── vision.py          # Body tracking — camera, MediaPipe, calibration, smoothing
-├── main.py              # Game — Pygame mechanics, states, leaderboard, booth UI
-├── requirements.txt     # Pinned, tested dependency versions
-├── assets/              # Sprites & sounds
+├── vision.py             # Body tracking — camera, MediaPipe, calibration, smoothing
+├── input.py              # Integration boundary — main.py's only link to player input
+├── main.py                # Game — Pygame mechanics, states, leaderboard, booth UI
+├── leaderboard.py         # SQLite leaderboard persistence
+├── sprites.py             # Fruit/bomb sprite rendering
+├── requirements.txt       # Pinned, tested dependency versions
+├── setup.sh / setup.bat   # One-command environment setup + launch
+├── fruit_assets/          # Sprites
 └── README.md
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Manual Setup (if you skipped the Quick Start above)
 
 ### 1 — Install Python 3.11
 
@@ -88,7 +126,7 @@ Download from [python.org](https://www.python.org/downloads/) — ✅ make sure 
 ### 2 — Clone the repo
 
 ```bash
-git clone <https://github.com/AditA1104/AI-Arcade.git>
+git clone https://github.com/AditA1104/AI-Arcade.git
 cd AI-Arcade
 ```
 
@@ -133,7 +171,7 @@ python vision.py
 This runs:
 
 1. **Warmup** (2s) — lets the tracker lock onto you
-2. **Calibration** (5s) — wave your hand around your full intended play area
+2. **Calibration** (7s) — wave your hand around your full intended play area
 3. **Live tracking** — prints `Player pos: x=, y=` continuously until `Ctrl+C`
 
 > 🎯 Calibration is **per-person, per-camera** — every player (and every laptop) should run it fresh, not reuse someone else's saved range.
@@ -143,7 +181,7 @@ This runs:
 ## 🔌 Using It In the Game
 
 ```python
-from vision import init_tracker, get_player_position, shutdown_tracker
+from input import init_tracker, get_player_position, shutdown_tracker
 
 init_tracker()          # once at startup — blocks ~7s for warmup + calibration
 
@@ -153,6 +191,8 @@ x, y = get_player_position()   # (int, int), already mapped to 1280×720, non-bl
 # on exit:
 shutdown_tracker()
 ```
+
+`input.py` is the integration boundary — `main.py` never imports `vision.py` directly. It currently wires straight through to live pose tracking, but the file also has a commented-out mouse-control fallback for quick local testing without a camera; swap the import block if you need it.
 
 ---
 
@@ -176,3 +216,11 @@ Runs smoothly at **30+ FPS** on a MacBook Air M4, CPU-only. MediaPipe Pose is a 
 |---|---|---|
 | 👁️ Vision & Integration | **Adit** | Camera pipeline, MediaPipe, calibration, smoothing, threading |
 | 🕹️ Game & UI | **Srujan** | Pygame mechanics, game states, leaderboard, booth UX flow |
+
+---
+
+## 📄 License
+
+The source code in this repository is licensed under the [MIT License](LICENSE) — free to use, fork, and modify.
+
+The fruit sprite images in `fruit_assets/` were sourced during development; their original license hasn't been independently verified. Confirm provenance before redistributing this project widely.
